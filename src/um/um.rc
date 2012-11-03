@@ -1,0 +1,17 @@
+
+#include "resource.h"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// RCDATA
+//
+#ifdef _DEBUG
+    DRIVER32        RCDATA              "km32_d.sys"
+    DRIVER64        RCDATA              "km64_d.sys"
+#else
+    DRIVER32        RCDATA              "km32.sys"
+    DRIVER64        RCDATA              "km64.sys"
+#endif
+
+DBGHELPDLL          RCDATA              "dbghelp.dll"
+SYMSRVDLL           RCDATA              "symsrv.dll"                  
