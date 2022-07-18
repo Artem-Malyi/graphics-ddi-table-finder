@@ -1,9 +1,11 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 9.00
-# Visual Studio 2005
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "km", "..\src\km\km.vcproj", "{97F60600-E07E-4559-A835-DF2B7CA5DE9C}"
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.32602.291
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "km", "..\src\km\km.vcxproj", "{97F60600-E07E-4559-A835-DF2B7CA5DE9C}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "um", "..\src\um\um.vcproj", "{18B71DC4-4CE9-402C-9399-D500FDE29515}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "um", "..\src\um\um.vcxproj", "{18B71DC4-4CE9-402C-9399-D500FDE29515}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,5 +32,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D29E5306-A9F1-4393-8B15-CFEE73A9A63F}
 	EndGlobalSection
 EndGlobal

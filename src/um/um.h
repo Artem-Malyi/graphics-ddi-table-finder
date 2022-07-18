@@ -14,10 +14,10 @@
 #ifdef DEBUG_OUTPUT_UM
     #define LOG_OUTPUT_UM(fmt, ...)                                                         \
     {                                                                                       \
-        WCHAR wsOutput[OUTPUT_BUFFER_SIZE] = {0};                                           \
-        _snwprintf(wsOutput, OUTPUT_BUFFER_SIZE, L"OFFSET-FINDER UM: %S - "##fmt##L"\r\n",  \
+        CHAR wsOutput[OUTPUT_BUFFER_SIZE] = {0};                                            \
+        _snprintf(wsOutput, OUTPUT_BUFFER_SIZE, "OFFSET-FINDER UM: %s - "##fmt##"\r\n",     \
             __FUNCTION__, __VA_ARGS__);                                                     \
-        OutputDebugString(wsOutput);                                                        \
+        OutputDebugStringA(wsOutput);                                                       \
     }
 #else 
     #define LOG_OUTPUT_UM(...)
@@ -40,22 +40,22 @@ typedef BOOL (WINAPI *SymInitialize_t)(
     __in BOOL     fInvadeProcess
     );
 
-typedef struct {
-    DWORD sizeofstruct;
-    TCHAR file[MAX_PATH +1];
-    BOOL  stripped;
-    DWORD timestamp;
-    DWORD size;
-    TCHAR dbgfile[MAX_PATH +1];
-    TCHAR pdbfile[MAX_PATH + 1];
-    GUID  guid;
-    DWORD sig;
-    DWORD age;
-} SYMSRV_INDEX_INFO, *PSYMSRV_INDEX_INFO;
+//typedef struct {
+//    DWORD sizeofstruct;
+//    WCHAR file[MAX_PATH +1];
+//    BOOL  stripped;
+//    DWORD timestamp;
+//    DWORD size;
+//    WCHAR dbgfile[MAX_PATH +1];
+//    WCHAR pdbfile[MAX_PATH + 1];
+//    GUID  guid;
+//    DWORD sig;
+//    DWORD age;
+//} SYMSRV_INDEX_INFOW, *PSYMSRV_INDEX_INFOW;
 
-typedef BOOL (WINAPI *SymSrvGetFileIndexInfo_t)(
+typedef BOOL (WINAPI *SymSrvGetFileIndexInfoW_t)(
     __in   PWSTR File,
-    __out  PSYMSRV_INDEX_INFO Info,
+    __out  PSYMSRV_INDEX_INFOW Info,
     __in   DWORD Flags
     );
 

@@ -29,7 +29,7 @@ BOOL        SetPrivilege            (PWSTR lpszPrivilege, BOOL bEnablePrivilege)
 
 LONG __stdcall TopLevelExceptionHandler(PEXCEPTION_POINTERS pInfo) 
 {
-    LOG_OUTPUT_UM(L"SEH exception occurred");
+    LOG_OUTPUT_UM("SEH exception occurred");
 
     if (g_drvCtx.bInstalled)
         UninstallDriver(&g_drvCtx);
@@ -119,8 +119,8 @@ void main()
         ExitProcess (-1);
     }
     // TODO: Wait for the result with some progress indicator
-    LOG_OUTPUT_UM(L"Bytes returned: %d, bResult: %d", dwReturned, bResult);
-    LOG_OUTPUT_UM(L"Offset values: DCOBJ - 0x%04x, PDEV_WIN32K - 0x%04x", foundOffs.ulDCOBJoffset, foundOffs.ulPDEVoffset);
+    LOG_OUTPUT_UM("Bytes returned: %d, bResult: %d", dwReturned, bResult);
+    LOG_OUTPUT_UM("Offset values: DCOBJ - 0x%04x, PDEV_WIN32K - 0x%04x", foundOffs.ulDCOBJoffset, foundOffs.ulPDEVoffset);
 
     if (foundOffs.ulDCOBJoffset == NOT_FOUND_OFFSET ||
         foundOffs.ulPDEVoffset == NOT_FOUND_OFFSET)
@@ -156,11 +156,11 @@ DWORD64 GetSymbolAddress(PWSTR wsImageFilePath, PWSTR wsSymbolName)
         hDbgHelp = LoadLibrary(L"dbghelp.dll");
     if (!hDbgHelp)
     {
-        LOG_OUTPUT_UM(L"Could not initialize DbgHelp library.");
+        LOG_OUTPUT_UM("Could not initialize DbgHelp library.");
         return 0;
     }
     SymInitialize_t pSymInitialize = (SymInitialize_t)GetProcAddress(hDbgHelp, "SymInitialize");
-    SymSrvGetFileIndexInfo_t pSymSrvGetFileIndexInfo = (SymSrvGetFileIndexInfo_t)GetProcAddress(hDbgHelp, "SymSrvGetFileIndexInfoW");
+    SymSrvGetFileIndexInfoW_t pSymSrvGetFileIndexInfo = (SymSrvGetFileIndexInfoW_t)GetProcAddress(hDbgHelp, "SymSrvGetFileIndexInfoW");
     SymFindFileInPath_t pSymFindFileInPath = (SymFindFileInPath_t)GetProcAddress(hDbgHelp, "SymFindFileInPath");
     SymLoadModuleEx_t pSymLoadModuleEx = (SymLoadModuleEx_t)GetProcAddress(hDbgHelp, "SymLoadModuleEx");
     SymGetModuleInfo64_t pSymGetModuleInfo64 = (SymGetModuleInfo64_t)GetProcAddress(hDbgHelp, "SymGetModuleInfo64");
@@ -170,7 +170,7 @@ DWORD64 GetSymbolAddress(PWSTR wsImageFilePath, PWSTR wsSymbolName)
     if (!pSymInitialize || !pSymSrvGetFileIndexInfo || !pSymFindFileInPath || !pSymLoadModuleEx || 
         !pSymGetModuleInfo64 || !pSymGetSymFromName64 || !pSymGetOptions || !pSymSetOptions)
     {
-        LOG_OUTPUT_UM(L"Could not initialize DbgHelp library.");
+        LOG_OUTPUT_UM("Could not initialize DbgHelp library.");
         return 0;
     }
 
@@ -179,19 +179,19 @@ DWORD64 GetSymbolAddress(PWSTR wsImageFilePath, PWSTR wsSymbolName)
     BOOL bRet = pSymInitialize(symHandle, NULL, FALSE); 
     if (!bRet) 
     {
-        LOG_OUTPUT_UM(L"Could not initialize DbgHelp library.");
+        LOG_OUTPUT_UM("Could not initialize DbgHelp library.");
         return 0; 
     }
 
     // Enable debugging output
     // pSymSetOptions(pSymGetOptions() | SYMOPT_UNDNAME | SYMOPT_DEBUG);
 
-    SYMSRV_INDEX_INFO indexInfo = {0};
-    indexInfo.sizeofstruct = sizeof(SYMSRV_INDEX_INFO);
+    SYMSRV_INDEX_INFOW indexInfo = {0};
+    indexInfo.sizeofstruct = sizeof(SYMSRV_INDEX_INFOW);
     bRet = pSymSrvGetFileIndexInfo(wsImageFilePath, &indexInfo, 0);
     if (!bRet)
     {
-        LOG_OUTPUT_UM(L"Could not obtain file index info for file %s.", wsImageFilePath);
+        LOG_OUTPUT_UM("Could not obtain file index info for file %S", wsImageFilePath);
         return 0;
     }
 
@@ -205,7 +205,7 @@ DWORD64 GetSymbolAddress(PWSTR wsImageFilePath, PWSTR wsSymbolName)
         sSymbolsFileName, (PVOID)&indexInfo.guid, indexInfo.age, 0, SSRVOPT_GUIDPTR, sSymbolsFilePath, NULL, NULL);
     if (!bRet)
     {
-        LOG_OUTPUT_UM(L"Could not locate symbol info on symbols server for file %s. Status: %d", wsImageFilePath, GetLastError());
+        LOG_OUTPUT_UM("Could not locate symbol info on symbols server for file %S. Status: %d", wsImageFilePath, GetLastError());
         return 0;
     }
 
@@ -213,7 +213,7 @@ DWORD64 GetSymbolAddress(PWSTR wsImageFilePath, PWSTR wsSymbolName)
     DWORD64 dqSymbolsModuleBase = pSymLoadModuleEx(symHandle, NULL, sSymbolsFilePath, NULL, dqBaseAddress, 0, NULL, 0);
     if (!dqSymbolsModuleBase)
     {
-        LOG_OUTPUT_UM(L"Could not load symbols file into the process.");
+        LOG_OUTPUT_UM("Could not load symbols file into the process.");
         return 0;
     }
 
@@ -222,7 +222,7 @@ DWORD64 GetSymbolAddress(PWSTR wsImageFilePath, PWSTR wsSymbolName)
     bRet = pSymGetModuleInfo64(symHandle, dqSymbolsModuleBase, (PIMAGEHLP_MODULE64)&moduleInfo); 
     if(!bRet) 
     {
-        LOG_OUTPUT_UM(L"Could not get symbol information from symbols file.");
+        LOG_OUTPUT_UM("Could not get symbol information from symbols file.");
         return 0;
     }
 
@@ -239,10 +239,11 @@ DWORD64 GetSymbolAddress(PWSTR wsImageFilePath, PWSTR wsSymbolName)
 
     CHAR sSymbolName[512] = {0};
     _snprintf(sSymbolName, sizeof(sSymbolName), "%S!%S", wsModuleName, wsSymbolName);
-    pSymGetSymFromName64(symHandle, sSymbolName, &symInfo);
+    bRet = pSymGetSymFromName64(symHandle, sSymbolName, &symInfo);
+    DWORD lastError = GetLastError();
 
     symInfo.Address &= 0x00000000ffffffff;
-    LOG_OUTPUT_UM(L"%S virtual address is: 0x%x", sSymbolName, symInfo.Address);
+    LOG_OUTPUT_UM("%s virtual address is: 0x%llx", sSymbolName, symInfo.Address);
 
     return symInfo.Address;
 }
@@ -254,7 +255,7 @@ BOOL FillDDIentry(PWSTR wsPathToSymbolsFile, PWSTR wsSymbolName, ULONG ulDDIinde
     DWORD64 pSymbol = GetSymbolAddress(wsPathToSymbolsFile, wsSymbolName);
     if (!pSymbol)
     {
-        LOG_OUTPUT_UM(L"Could not obtain symbol %s from %s. Check your internet connection.\n", wsSymbolName, wsPathToSymbolsFile);
+        LOG_OUTPUT_UM("Could not obtain symbol %S from %S. Check your internet connection.\n", wsSymbolName, wsPathToSymbolsFile);
         return FALSE;
     }
     
@@ -271,7 +272,7 @@ BOOL FillDDIpointers(PDDI_PFNS pDdiPointers)
     if (!pDdiPointers)
         return FALSE;
 
-    LOG_OUTPUT_UM(L"entering");
+    LOG_OUTPUT_UM("entering");
 
     CWow64FsRedirHandler wow64; // Handle Wow64 FS redirection
 
@@ -319,7 +320,7 @@ BOOL GetKernelDcObjPointer(PLARGE_INTEGER pliGdiTablePointer)
     if (!pliGdiTablePointer)
         return FALSE;
     
-    LOG_OUTPUT_UM(L"entering");
+    LOG_OUTPUT_UM("entering");
 
     CWow64FsRedirHandler wow64;
     
@@ -332,7 +333,7 @@ BOOL GetKernelDcObjPointer(PLARGE_INTEGER pliGdiTablePointer)
     DWORD64 pGdiSharedHandleTable = GetSymbolAddress(wsPathToGdi32Dll, L"pGdiSharedHandleTable"); // used to be returned by GDI32!GdiQueryTable()
     if (!pGdiSharedHandleTable)
     {
-        LOG_OUTPUT_UM(L"Could not download symbol information for GDI32.dll. Check your internet connection.\n");
+        LOG_OUTPUT_UM("Could not download symbol information for GDI32.dll. Check your internet connection.\n");
         return FALSE;
     }
 
@@ -341,7 +342,7 @@ BOOL GetKernelDcObjPointer(PLARGE_INTEGER pliGdiTablePointer)
         pGdiBase = LoadLibrary(L"GDI32.dll");
     if (!pGdiBase)
     {
-        LOG_OUTPUT_UM(L"Failed to load GDI32.dll with status %d.\n", GetLastError());
+        LOG_OUTPUT_UM("Failed to load GDI32.dll with status %d.\n", GetLastError());
         return FALSE;
     }
 
@@ -372,7 +373,7 @@ BOOL GetKernelDcObjPointer(PLARGE_INTEGER pliGdiTablePointer)
 
     if (!liKernelDcObj.QuadPart)
     {
-        LOG_OUTPUT_UM(L"Failed to obtain kernel mode pointer to DCOBJ structure.\n");
+        LOG_OUTPUT_UM("Failed to obtain kernel mode pointer to DCOBJ structure.\n");
         return FALSE;
     }
 
@@ -398,16 +399,16 @@ BOOL ExtractRedistDllToCurDir(PWSTR wsDllName, ULONG ulResourceId)
     char* pResourceBody = (char*)LockResource(hLoadedResource);
     if (!pResourceBody || !dwResourceSize)
     {
-        LOG_OUTPUT_UM(L"Failed retrieve %s from resources. Status: %d.\n", wsDllName, GetLastError());
+        LOG_OUTPUT_UM("Failed retrieve %S from resources. Status: %d.\n", wsDllName, GetLastError());
         return FALSE;
     }
 
     WCHAR wsDllFullPath[MAX_PATH] = {0};
-    _snwprintf(wsDllFullPath, MAX_PATH, L"%s\\%s", wsCurrentDir, wsDllName);
+    _snwprintf(wsDllFullPath, MAX_PATH, L"%S\\%S", wsCurrentDir, wsDllName);
     HANDLE hDbgHelpFile = CreateFile(wsDllFullPath, FILE_ALL_ACCESS, FILE_SHARE_READ, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
     if (hDbgHelpFile == INVALID_HANDLE_VALUE)
     {
-        LOG_OUTPUT_UM(L"Failed to create file %s. Status: %d.\n", wsDllFullPath, GetLastError());
+        LOG_OUTPUT_UM("Failed to create file %S. Status: %d.\n", wsDllFullPath, GetLastError());
         return FALSE;
     }
     DWORD dwWritten = 0;
@@ -425,7 +426,7 @@ BOOL InstallDriver(PInstDriverContext pDrvCtx)
     if (!pDrvCtx)
         return FALSE;
 
-    LOG_OUTPUT_UM(L"entering");
+    LOG_OUTPUT_UM("entering");
     
     SetPrivilege(L"SeLoadDriverPrivilege", TRUE);
     //ShowProcessPrivileges();
@@ -438,7 +439,7 @@ BOOL InstallDriver(PInstDriverContext pDrvCtx)
     char* pDriverBody = (char*)LockResource(hResource);
     if (!pDriverBody || !dwDriverSize)
     {
-        LOG_OUTPUT_UM(L"Failed retrieve driver from resources. Status: %d.\n", GetLastError());
+        LOG_OUTPUT_UM("Failed retrieve driver from resources. Status: %d.\n", GetLastError());
         return FALSE;
     }
 
@@ -450,7 +451,7 @@ BOOL InstallDriver(PInstDriverContext pDrvCtx)
     HANDLE hFile = CreateFile(wsTmpFileName, FILE_ALL_ACCESS, FILE_SHARE_READ, 0, CREATE_ALWAYS, 0, 0);
     if (hFile == INVALID_HANDLE_VALUE)
     {
-        LOG_OUTPUT_UM(L"Failed to create file %s", wsTmpFileName);
+        LOG_OUTPUT_UM("Failed to create file %S", wsTmpFileName);
         return FALSE;
     }
 
@@ -465,7 +466,7 @@ BOOL InstallDriver(PInstDriverContext pDrvCtx)
     LONG lRet = RegCreateKey(HKEY_LOCAL_MACHINE, wsSubKey, &hKey);
     if (lRet)
     {
-        LOG_OUTPUT_UM(L"Could not create the registry key HKLM\\%s. Not running as Administrator?", wsSubKey);
+        LOG_OUTPUT_UM("Could not create the registry key HKLM\\%S. Not running as Administrator?", wsSubKey);
         DeleteFile(wsTmpFileName);
         return FALSE;
     }
@@ -487,7 +488,7 @@ BOOL InstallDriver(PInstDriverContext pDrvCtx)
     NTSTATUS status = ZwLoadDriver(&usNativeRegPath);
     if (!NT_SUCCESS(status))
     {
-        LOG_OUTPUT_UM(L"Failed to load driver. Native status: %x.\n", status);
+        LOG_OUTPUT_UM("Failed to load driver. Native status: %x.\n", status);
         SHDeleteKey(HKEY_LOCAL_MACHINE, wsSubKey);
         DeleteFile(wsTmpFileName);
         return FALSE;
@@ -507,7 +508,7 @@ BOOL UninstallDriver(PInstDriverContext pDrvCtx)
     if (!pDrvCtx)
         return FALSE;
 
-    LOG_OUTPUT_UM(L"entering");
+    LOG_OUTPUT_UM("Entering");
     
     UNICODE_STRING usNativeRegPath = {0};
     RtlInitUnicodeString(&usNativeRegPath, pDrvCtx->wsRegPathToServiceNative);
@@ -566,11 +567,11 @@ BOOL ObtainCommandLineArgs(ULONG& ulDCOBJiterations, ULONG& ulPDEViterations)
     return TRUE;
 }
 
-extern "C" int __security_cookie = 0; // TODO: elaborate this
+//extern "C" int __security_cookie = 0; // TODO: elaborate this
 
 extern "C" int __CxxFrameHandler3(int a, int b, int c, int d)
 {    
-    LOG_OUTPUT_UM(L"SEH exception occurred");
+    LOG_OUTPUT_UM("SEH exception occurred");
 
     if (g_drvCtx.bInstalled)
         UninstallDriver(&g_drvCtx);
@@ -695,7 +696,7 @@ BOOL SetPrivilege(
     HANDLE hToken = NULL;
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken))
     {
-        LOG_OUTPUT_UM(L"OpenProcessToken error: %u\n", GetLastError()); 
+        LOG_OUTPUT_UM("OpenProcessToken error: %u\n", GetLastError()); 
         return FALSE; 
     }
 
@@ -705,7 +706,7 @@ BOOL SetPrivilege(
             lpszPrivilege,      // privilege to lookup 
             &luid))             // receives LUID of privilege
     {
-        LOG_OUTPUT_UM(L"LookupPrivilegeValue error: %u\n", GetLastError()); 
+        LOG_OUTPUT_UM("LookupPrivilegeValue error: %u\n", GetLastError()); 
         CloseHandle(hToken);
         return FALSE; 
     }
@@ -721,14 +722,14 @@ BOOL SetPrivilege(
     // Enable the privilege or disable all privileges.
     if (!AdjustTokenPrivileges(hToken, FALSE, &tp, sizeof(TOKEN_PRIVILEGES), (PTOKEN_PRIVILEGES)NULL, (PDWORD)NULL))
     { 
-        LOG_OUTPUT_UM(L"AdjustTokenPrivileges error: %u\n", GetLastError()); 
+        LOG_OUTPUT_UM("AdjustTokenPrivileges error: %u\n", GetLastError()); 
         CloseHandle(hToken);
         return FALSE; 
     } 
 
     if (GetLastError() == ERROR_NOT_ALL_ASSIGNED)
     {
-        LOG_OUTPUT_UM(L"Could not obtain the %sprivilege. \n", lpszPrivilege);
+        LOG_OUTPUT_UM("Could not obtain the %S privilege. \n", lpszPrivilege);
         CloseHandle(hToken);
         return FALSE;
     } 
